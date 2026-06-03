@@ -10,4 +10,6 @@ public interface UserSecurityDetailRepo extends JpaRepository<UserSecurityDetail
 
     @Query(value = "select user from UserSecurityDetails user where user.userid = :userid and active != 9")
     UserSecurityDetails findbyUserId(@Param("userid") String userid);
+
+    UserSecurityDetails findByToken(String token);
 }

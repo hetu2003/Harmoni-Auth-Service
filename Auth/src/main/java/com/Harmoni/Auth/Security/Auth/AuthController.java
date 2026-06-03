@@ -2,10 +2,7 @@ package com.Harmoni.Auth.Security.Auth;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -32,5 +29,20 @@ public class AuthController {
     public ResponseEntity<AuthDto.Response> loginWithGoogle(@RequestBody AuthDto.GoogleLogin request) {
         AuthDto.Response response = authService.loginWithGoogle(request);
         return ResponseEntity.ok(response);
+    }
+
+    // 4. Logout Route
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@RequestHeader("Authorization") String authorizationHeader) {
+        String token = authorizationHeader.substring(7); // "Bearer ".length()
+        String result = authService.logout(token);
+        return ResponseEntity.ok(result);
+    }
+
+    // 5. Change Password Route
+    @PostMapping("/change-password")
+    public ResponseEntity<String> changePassword(@RequestBody AuthDto.ChangePassword request) {
+        String result = authService.changePassword(request);
+        return ResponseEntity.ok(result);
     }
 }

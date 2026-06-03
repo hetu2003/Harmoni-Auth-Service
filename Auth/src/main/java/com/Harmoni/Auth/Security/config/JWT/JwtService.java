@@ -5,7 +5,7 @@ import com.Harmoni.Auth.Security.Exception.UnauthorizedException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.KeyGenerator;
@@ -13,28 +13,36 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
 public class JwtService {
 
-    public static String generateToken(Users userDetails, String email, String userid, String syckey) {
+    @Value("${jwt.secret}")
+    private String secretKey;
+
+    // Token validity: 24 hours
+    private static final long TOKEN_VALIDITY = 24 * 60 * 60 * 1000;
+
+    public String generateToken(Users users, String email, String userid) {
         Map<String, Object> claims = new HashMap<>();
-        claims.clear();
         claims.put("email", email);
         claims.put("userid", userid);
 
         return Jwts.builder()
-                .subject(userDetails.getUserName())
+                .subject(users.getUserName())
                 .claims(claims)
-                .signWith(Keys.hmacShaKeyFor(syckey.getBytes(StandardCharsets.UTF_8)))
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + TOKEN_VALIDITY))
+                .signWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)))
                 .compact();
     }
 
-    public String extractUsername(String jwt, String syckey) {
+    public String extractUsername(String jwt) {
         try {
-            Claims claims = getClaims(jwt, syckey);
+            Claims claims = getClaims(jwt);
             if (claims == null) {
                 throw new UnauthorizedException("Unauthorised: Empty claims payload");
             }
@@ -44,9 +52,9 @@ public class JwtService {
         }
     }
 
-    public Claims getClaims(String jwt, String syckey) {
+    public Claims getClaims(String jwt) {
         return Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(syckey.getBytes(StandardCharsets.UTF_8)))
+                .verifyWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)))
                 .build()
                 .parseSignedClaims(jwt)
                 .getPayload();

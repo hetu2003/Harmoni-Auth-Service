@@ -6,4 +6,8 @@ public interface AuthService {
     AuthDto.Response loginLocal(AuthDto.LocalLogin request);
 
     AuthDto.Response loginWithGoogle(AuthDto.GoogleLogin request);
+
+    String logout(String token);
+
+    String changePassword(AuthDto.ChangePassword request);
 }

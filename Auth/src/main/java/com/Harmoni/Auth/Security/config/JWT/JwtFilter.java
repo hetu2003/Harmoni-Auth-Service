@@ -1,12 +1,13 @@
 package com.Harmoni.Auth.Security.config.JWT;
 
-import com.Harmoni.Auth.Security.Exception.UnauthorizedException;
 import com.Harmoni.Auth.Security.Auth.UserRepo;
 import com.Harmoni.Auth.Security.Auth.Users;
+import com.Harmoni.Auth.Security.Exception.UnauthorizedException;
 import com.Harmoni.Auth.Security.config.UserDetails.CustomUserService;
 import com.Harmoni.Auth.Security.config.UserDetails.UserSecurityDetailRepo;
 import com.Harmoni.Auth.Security.config.UserDetails.UserSecurityDetails;
-import jakarta.servlet.*;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +68,7 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String jwt = authHeader.substring(7);
-        String username = jwtService.extractUsername(jwt, seckey);
+        String username = jwtService.extractUsername(jwt);
 
         // 2. Fetch User directly (No Optionals)
         Users user = userRepo.findByEmail(username);

@@ -26,6 +26,7 @@ public class AuthDto {
     @AllArgsConstructor
     public static class GoogleLogin {
         private String idToken;
+        private String email;
     }
 
     // 3. Combined Response
@@ -37,5 +38,15 @@ public class AuthDto {
         private String token;
         private String userId;
         private String email;
+    }
+
+    // 4. Change Password Request
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChangePassword {
+        private String username;
+        private String oldPassword;
+        private String newPassword;
     }
 }
