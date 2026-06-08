@@ -15,8 +15,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -38,9 +40,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${google.client.id}")
     private String googleClientId;
-
+    
     @Override
-    public String registerLocalUser(AuthDto.LocalLogin request) {
+    public String registerLocalUser(UserRegisterDto request, String uploadedProfilePath) {
         Users existingUserByEmail = userRepo.findByEmail(request.getEmail());
         if (existingUserByEmail != null) {
             return "Email is already registered.";
@@ -54,11 +56,27 @@ public class AuthServiceImpl implements AuthService {
         String temporaryPassword = mailService.sendTemporaryPassword(request.getEmail());
 
         Users newUser = new Users();
-        newUser.setUserName(request.getUsername());
+        newUser.setUsername(request.getUsername());
         newUser.setEmail(request.getEmail());
         newUser.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+
+        String fullName = (request.getFirstName() + " " + request.getLastName()).trim();
+        newUser.setName(fullName);
+
+        newUser.setRoleId(request.getRoleId());
+        newUser.setContactNumber(request.getContactNumber());
+        newUser.setStreetAddress(request.getStreetAddress());
+        newUser.setStateId(request.getStateId());
+        newUser.setCityId(request.getCityId());
+        newUser.setCompanyDescription(request.getSpecialCategory());
+        newUser.setProfilePath(uploadedProfilePath);
+
         newUser.setIsActive(1);
-        newUser.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        newUser.setCreatedAt(now);
+        newUser.setModifiedOn(now);
+        newUser.setCreatedBy(0);
+        newUser.setModifiedBy(0);
 
         userRepo.save(newUser);
 
@@ -69,11 +87,11 @@ public class AuthServiceImpl implements AuthService {
         UserSecurityDetails details = userSecurityDetailRepo.findbyUserId(String.valueOf(user.getUserId()));
         if (details == null) {
             details = new UserSecurityDetails();
-            details.setUserid(user.getUserId());
+            details.setUserid(String.valueOf(user.getUserId()));
         }
         details.setToken(token);
         details.setActive(1);
-        details.setExpiretime(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000)); // 24 hours
+        details.setExpiretime(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000));
         userSecurityDetailRepo.save(details);
     }
 
@@ -128,7 +146,7 @@ public class AuthServiceImpl implements AuthService {
                     while (userRepo.findByUsername(uniqueUsername) != null) {
                         uniqueUsername = baseUsername + "_" + System.currentTimeMillis() % 10000;
                     }
-                    user.setUserName(uniqueUsername);
+                    user.setUsername(uniqueUsername);
                     
                     user.setPasswordHash("GOOGLE_AUTH");
                     user.setIsActive(1);
@@ -157,7 +175,7 @@ public class AuthServiceImpl implements AuthService {
     public String logout(String token) {
         UserSecurityDetails userSecurityDetails = userSecurityDetailRepo.findByToken(token);
         if (userSecurityDetails != null) {
-            userSecurityDetails.setActive(9); // Mark as inactive/logged out
+            userSecurityDetails.setActive(9);
             userSecurityDetailRepo.save(userSecurityDetails);
             return "Logout successful.";
         }
@@ -178,7 +196,6 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepo.save(user);
 
-        // Invalidate all existing tokens for the user
         UserSecurityDetails userSecurityDetails = userSecurityDetailRepo.findbyUserId(String.valueOf(user.getUserId()));
         if (userSecurityDetails != null) {
             userSecurityDetails.setActive(9);
@@ -186,5 +203,50 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return "Password changed successfully.";
+    }
+
+    @Override
+    public String processForgotPassword(AuthDto.ForgotPasswordRequest request) {
+        Users user = userRepo.findByEmail(request.getEmail());
+        if (user == null) {
+            // Return success even if user not found to prevent email enumeration attacks
+            return "If that email exists, a password reset link has been sent.";
+        }
+
+        // Generate a unique token
+        String resetToken = UUID.randomUUID().toString();
+        user.setResetPasswordToken(resetToken);
+        userRepo.save(user);
+
+        // Construct the reset link (pointing to the Master frontend)
+        // In a real app, this base URL should come from properties
+        String resetLink = "http://localhost:8082/harmoni/reset-password?token=" + resetToken;
+
+        mailService.sendPasswordResetEmail(user.getEmail(), resetLink);
+
+        return "If that email exists, a password reset link has been sent.";
+    }
+
+    @Override
+    public String processResetPassword(AuthDto.ResetPasswordRequest request) {
+        Users user = userRepo.findByResetPasswordToken(request.getToken());
+        if (user == null) {
+            return "Invalid or expired reset token.";
+        }
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        // Invalidate the token so it can't be used again
+        user.setResetPasswordToken(null);
+        userRepo.save(user);
+
+        // Invalidate active sessions
+        UserSecurityDetails userSecurityDetails = userSecurityDetailRepo.findbyUserId(String.valueOf(user.getUserId()));
+        if (userSecurityDetails != null) {
+            userSecurityDetails.setActive(9);
+            userSecurityDetailRepo.save(userSecurityDetails);
+        }
+
+        return "Password reset successfully. You can now login.";
     }
 }

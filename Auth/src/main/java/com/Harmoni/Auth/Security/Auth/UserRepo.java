@@ -15,10 +15,7 @@ public interface UserRepo extends JpaRepository<Users, Long> {
     @Query("SELECT u FROM Users u WHERE u.username = :username")
     Users findByUsername(@Param("username") String username);
 
-    // 3. Optional helper for checking registration status safely
-    @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM Users u WHERE u.email = :email")
-    boolean existsByEmail(@Param("email") String email);
-
-    @Query(value = "select count(*) from Users where email = :email", nativeQuery = true)
-    Integer findEmailCount(@Param("email") String email);
+    // 3. Used for password reset functionality
+    @Query("SELECT u FROM Users u WHERE u.resetPasswordToken = :token")
+    Users findByResetPasswordToken(@Param("token") String token);
 }

@@ -6,6 +6,7 @@ import com.Harmoni.Auth.Security.Exception.UnauthorizedException;
 import com.Harmoni.Auth.Security.config.UserDetails.CustomUserService;
 import com.Harmoni.Auth.Security.config.UserDetails.UserSecurityDetailRepo;
 import com.Harmoni.Auth.Security.config.UserDetails.UserSecurityDetails;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,8 +59,14 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException  {
 
+        // Skip JWT validation for authentication endpoints
+        if (request.getServletPath().startsWith("/auth")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
-        String seckey = request.getHeader("seckey");
+        String seckey = request.getHeader("seckey"); // This is still present from your original code, but not used in JWT validation
 
         // 1. If there's no bearer token, skip authorization filter checks and move to the next filter
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -68,7 +75,18 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String jwt = authHeader.substring(7);
-        String username = jwtService.extractUsername(jwt);
+        String username = null;
+        try {
+            username = jwtService.extractUsername(jwt);
+        } catch (ExpiredJwtException e) {
+            // Token is expired, but we still need to check if it's in the DB as active=1
+            // The DB check below will handle this.
+        } catch (Exception e) {
+            // Other JWT parsing errors
+            filterChain.doFilter(request, response);
+            return;
+        }
+
 
         // 2. Fetch User directly (No Optionals)
         Users user = userRepo.findByEmail(username);
@@ -95,16 +113,17 @@ public class JwtFilter extends OncePerRequestFilter {
 
             Users userDetails = (Users) customUserService.loadUserByUsername(username);
 
-            if (userDetails != null && userSecurityDetail.getExpiretime().after(Date.from(Instant.now()))) {
+            if (userDetails != null && userSecurityDetail.getActive() == 1 && userSecurityDetail.getExpiretime().after(Date.from(Instant.now()))) {
                 UsernamePasswordAuthenticationToken authenticationToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, java.util.Collections.emptyList());
 
                 authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             } else {
-                userSecurityDetail.setActive(9);
+                userSecurityDetail.setActive(9); // Mark as inactive if expired or invalid
                 userSecurityDetailRepo.save(userSecurityDetail);
-                throw new UnauthorizedException("Token Expired.");
+                // Do not throw UnauthorizedException here, just let the filter chain continue without authentication
+                // The @PreAuthorize or other security annotations will then handle the 403/401
             }
         }
         filterChain.doFilter(request, response);

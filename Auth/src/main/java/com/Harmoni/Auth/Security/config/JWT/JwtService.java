@@ -32,7 +32,7 @@ public class JwtService {
         claims.put("userid", userid);
 
         return Jwts.builder()
-                .subject(users.getUserName())
+                .subject(users.getUsername())
                 .claims(claims)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + TOKEN_VALIDITY))

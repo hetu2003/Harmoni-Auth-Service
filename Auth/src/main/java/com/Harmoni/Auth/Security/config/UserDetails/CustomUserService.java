@@ -1,6 +1,5 @@
 package com.Harmoni.Auth.Security.config.UserDetails;
 
-import com.Harmoni.Auth.Security.Exception.UserNotFoundException;
 import com.Harmoni.Auth.Security.Auth.UserRepo;
 import com.Harmoni.Auth.Security.Auth.Users;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,18 +18,18 @@ public class CustomUserService implements UserDetailsService {
     private UserRepo userRepo;
 
     @Override
-    public UserDetails loadUserByUsername(String credential) throws UsernameNotFoundException {
-        Users user = userRepo.findByUsername(credential);
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Users user = userRepo.findByUsername(username);
         if (user == null) {
-            user = userRepo.findByEmail(credential);
+            user = userRepo.findByEmail(username);
         }
 
         if (user == null) {
-            throw new UserNotFoundException("User with credential " + credential + " not found.");
+            throw new UsernameNotFoundException("User not found with username: " + username);
         }
 
         return User.builder()
-                .username(user.getUserName())
+                .username(user.getUsername())
                 .password(user.getPasswordHash())
                 .authorities(Collections.emptyList())
                 .build();

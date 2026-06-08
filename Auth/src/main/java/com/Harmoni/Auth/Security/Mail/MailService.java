@@ -12,29 +12,36 @@ public class MailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    /**
-     * Generates a random temporary password and sends it to the user's email.
-     *
-     * @param email The user's email address.
-     * @return The generated temporary password.
-     */
     public String sendTemporaryPassword(String email) {
         String temporaryPassword = UUID.randomUUID().toString().substring(0, 8);
         
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@harmoni.com"); // You can use your email here or a no-reply address
             message.setTo(email);
             message.setSubject("Your Temporary Password for Harmoni");
             message.setText("Welcome to Harmoni! Your temporary password is: " + temporaryPassword);
             
             mailSender.send(message);
         } catch (Exception e) {
-            // Log the exception or handle it as needed
-            // For now, we'll print to console to avoid crashing the registration process
             System.err.println("Error sending email: " + e.getMessage());
         }
-
+        
         return temporaryPassword;
+    }
+
+    public void sendPasswordResetEmail(String email, String resetLink) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@harmoni.com");
+            message.setTo(email);
+            message.setSubject("Password Reset Request - Harmoni");
+            message.setText("You requested a password reset. Please click the link below to reset your password:\n\n" 
+                    + resetLink + "\n\nIf you did not request this, please ignore this email.");
+            
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Error sending password reset email: " + e.getMessage());
+            throw new RuntimeException("Failed to send password reset email.");
+        }
     }
 }

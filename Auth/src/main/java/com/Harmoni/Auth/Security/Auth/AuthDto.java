@@ -6,11 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 public class AuthDto {
-    // Private constructor prevents instantiation of the wrapper container
-    private AuthDto() {
-    }
+    private AuthDto() {}
 
-    // 1. Traditional Login Request
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -20,7 +17,6 @@ public class AuthDto {
         private String email;
     }
 
-    // 2. Google OAuth Request
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -29,7 +25,6 @@ public class AuthDto {
         private String email;
     }
 
-    // 3. Combined Response
     @Data
     @Builder
     @NoArgsConstructor
@@ -40,13 +35,27 @@ public class AuthDto {
         private String email;
     }
 
-    // 4. Change Password Request
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ChangePassword {
         private String username;
         private String oldPassword;
+        private String newPassword;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ForgotPasswordRequest {
+        private String email;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ResetPasswordRequest {
+        private String token;
         private String newPassword;
     }
 }

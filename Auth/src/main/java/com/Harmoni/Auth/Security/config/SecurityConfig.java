@@ -1,12 +1,11 @@
 package com.Harmoni.Auth.Security.config;
 
-import com.Harmoni.Auth.Security.config.Handlers.FailureHandler;
-import com.Harmoni.Auth.Security.config.Handlers.SuccessHandler;
 import com.Harmoni.Auth.Security.config.JWT.JwtFilter;
 import com.Harmoni.Auth.Security.config.UserDetails.CustomUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -32,13 +31,7 @@ public class SecurityConfig {
     private CustomUserService customUserService;
 
     @Autowired
-    JwtFilter filter;
-
-    @Autowired
-    private SuccessHandler successHandler;
-
-    @Autowired
-    private FailureHandler failureHandler;
+    private JwtFilter filter;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -47,9 +40,9 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider auth = new DaoAuthenticationProvider(customUserService);
-        auth.setPasswordEncoder(passwordEncoder());
-        return auth;
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(customUserService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
     }
 
     @Bean
@@ -58,33 +51,36 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        // Allow anyone to access the auth microservice endpoints freely
-                        .requestMatchers("/auth/**").permitAll()
-                        .anyRequest().authenticated()
-                )
+    @Order(1)
+    public SecurityFilterChain publicEndpoints(HttpSecurity http) throws Exception {
+        return http
+                .securityMatcher("/auth/**")
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .formLogin(form -> form
-                        .loginProcessingUrl("/auth/login/local")
-                        .successHandler(successHandler)
-                        .failureHandler(failureHandler)
-                )
-                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+                .csrf(AbstractHttpConfigurer::disable)
+                .build();
     }
 
     @Bean
+    @Order(2)
+    public SecurityFilterChain privateEndpoints(HttpSecurity http) throws Exception {
+        return http
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
+                .csrf(AbstractHttpConfigurer::disable)
+                .build();
+    }
+
+    // This configuration allows all origins, methods, and headers, which is suitable
+    // for a public-facing authentication microservice.
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow requests from your frontend origin (adjust as needed, e.g., http://localhost:3000 for React)
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:4200", "http://localhost:8080"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "seckey"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowedOrigins(Arrays.asList("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

@@ -1,7 +1,7 @@
 package com.Harmoni.Auth.Security.Auth;
 
 public interface AuthService {
-    String registerLocalUser(AuthDto.LocalLogin request);
+    String registerLocalUser(UserRegisterDto registerDto, String profilePath);
 
     AuthDto.Response loginLocal(AuthDto.LocalLogin request);
 
@@ -10,4 +10,8 @@ public interface AuthService {
     String logout(String token);
 
     String changePassword(AuthDto.ChangePassword request);
+
+    String processForgotPassword(AuthDto.ForgotPasswordRequest request);
+
+    String processResetPassword(AuthDto.ResetPasswordRequest request);
 }

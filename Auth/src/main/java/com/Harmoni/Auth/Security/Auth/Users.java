@@ -12,7 +12,7 @@ public class Users {
     Long userId;
 
     @Column(name = "user_name")
-    String userName;
+    String username;
 
     @Column(name = "name")
     String name;
@@ -62,6 +62,9 @@ public class Users {
     @Column(name = "modified_on")
     Timestamp modifiedOn;
 
+    @Column(name = "reset_password_token")
+    private String resetPasswordToken;
+
     public Users() {
     }
 
@@ -73,12 +76,12 @@ public class Users {
         this.userId = userId;
     }
 
-    public String getUserName() {
-        return userName;
+    public String getUsername() {
+        return username;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getName() {
@@ -207,5 +210,13 @@ public class Users {
 
     public void setModifiedOn(Timestamp modifiedOn) {
         this.modifiedOn = modifiedOn;
+    }
+
+    public String getResetPasswordToken() {
+        return resetPasswordToken;
+    }
+
+    public void setResetPasswordToken(String resetPasswordToken) {
+        this.resetPasswordToken = resetPasswordToken;
     }
 }
