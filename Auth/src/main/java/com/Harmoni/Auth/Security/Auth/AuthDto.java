@@ -58,4 +58,19 @@ public class AuthDto {
         private String token;
         private String newPassword;
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EmailOtpSendRequest {
+        private String email;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EmailOtpVerifyRequest {
+        private String email;
+        private String otp;
+    }
 }

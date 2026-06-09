@@ -113,6 +113,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
+
+		<!-- CouchDB via LightCouch -->
+		<dependency>
+			<groupId>org.lightcouch</groupId>
+			<artifactId>lightcouch</artifactId>
+			<version>0.2.0</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

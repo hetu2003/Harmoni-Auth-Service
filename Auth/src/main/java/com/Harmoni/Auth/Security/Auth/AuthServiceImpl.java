@@ -1,8 +1,10 @@
 package com.Harmoni.Auth.Security.Auth;
 
+import com.Harmoni.Auth.Security.CouchDb.EmailLoginAuditRepository;
 import com.Harmoni.Auth.Security.Exception.UnauthorizedException;
 import com.Harmoni.Auth.Security.Exception.UserNotFoundException;
 import com.Harmoni.Auth.Security.Mail.MailService;
+import com.Harmoni.Auth.Security.Otp.OtpService;
 import com.Harmoni.Auth.Security.config.JWT.JwtService;
 import com.Harmoni.Auth.Security.config.UserDetails.UserSecurityDetailRepo;
 import com.Harmoni.Auth.Security.config.UserDetails.UserSecurityDetails;
@@ -37,6 +39,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private UserSecurityDetailRepo userSecurityDetailRepo;
+
+    @Autowired
+    private OtpService otpService;
+
+    @Autowired
+    private EmailLoginAuditRepository auditRepository;
 
     @Value("${google.client.id}")
     private String googleClientId;
@@ -248,5 +256,53 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return "Password reset successfully. You can now login.";
+    }
+
+    @Override
+    public String updateProfile(Long userId, UpdateProfileRequest request, String profilePath) {
+        return "";
+    }
+
+    @Override
+    public String sendEmailOtp(AuthDto.EmailOtpSendRequest request) {
+        Users user = userRepo.findByEmail(request.getEmail());
+        if (user == null) {
+            // Return success to prevent email enumeration
+            return "If that email is registered, an OTP has been sent.";
+        }
+        String otp = otpService.generateAndStoreOtp(request.getEmail());
+        mailService.sendOtpEmail(request.getEmail(), otp);
+        auditRepository.logEvent(request.getEmail(), "EMAIL_OTP_SEND", "SUCCESS",
+                String.valueOf(user.getUserId()), "OTP sent");
+        return "OTP sent to your email. It expires in 5 minutes.";
+    }
+
+    @Override
+    public AuthDto.Response verifyEmailOtp(AuthDto.EmailOtpVerifyRequest request) {
+        Users user = userRepo.findByEmail(request.getEmail());
+        if (user == null) {
+            auditRepository.logEvent(request.getEmail(), "EMAIL_OTP_VERIFY_FAIL", "FAILED",
+                    null, "User not found");
+            throw new UserNotFoundException("Invalid credentials.");
+        }
+
+        boolean valid = otpService.verifyOtp(request.getEmail(), request.getOtp());
+        if (!valid) {
+            auditRepository.logEvent(request.getEmail(), "EMAIL_OTP_VERIFY_FAIL", "FAILED",
+                    String.valueOf(user.getUserId()), "Invalid or expired OTP");
+            throw new UnauthorizedException("Invalid or expired OTP.");
+        }
+
+        String jwtToken = jwtService.generateToken(user, user.getEmail(), String.valueOf(user.getUserId()));
+        saveOrUpdateTokenDetails(user, jwtToken);
+
+        auditRepository.logEvent(request.getEmail(), "EMAIL_OTP_VERIFY_SUCCESS", "SUCCESS",
+                String.valueOf(user.getUserId()), "Login successful");
+
+        return AuthDto.Response.builder()
+                .token(jwtToken)
+                .email(user.getEmail())
+                .userId(String.valueOf(user.getUserId()))
+                .build();
     }
 }
