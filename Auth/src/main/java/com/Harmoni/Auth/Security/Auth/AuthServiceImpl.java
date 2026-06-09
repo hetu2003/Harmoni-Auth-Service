@@ -68,7 +68,8 @@ public class AuthServiceImpl implements AuthService {
         newUser.setEmail(request.getEmail());
         newUser.setPasswordHash(passwordEncoder.encode(temporaryPassword));
 
-        String fullName = (request.getFirstName() + " " + request.getLastName()).trim();
+        String lastName = request.getLastName() != null ? request.getLastName() : "";
+        String fullName = (request.getFirstName() + " " + lastName).trim();
         newUser.setName(fullName);
 
         newUser.setRoleId(request.getRoleId());
@@ -260,7 +261,34 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String updateProfile(Long userId, UpdateProfileRequest request, String profilePath) {
-        return "";
+        Users user = userRepo.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found."));
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            user.setName(request.getName());
+        }
+        if (request.getContactNumber() != null && !request.getContactNumber().isBlank()) {
+            user.setContactNumber(request.getContactNumber());
+        }
+        if (request.getStreetAddress() != null && !request.getStreetAddress().isBlank()) {
+            user.setStreetAddress(request.getStreetAddress());
+        }
+        if (request.getCityId() != null) {
+            user.setCityId(request.getCityId());
+        }
+        if (request.getStateId() != null) {
+            user.setStateId(request.getStateId());
+        }
+        if (request.getCompanyDescription() != null) {
+            user.setCompanyDescription(request.getCompanyDescription());
+        }
+        if (profilePath != null && !profilePath.isBlank()) {
+            user.setProfilePath(profilePath);
+        }
+
+        user.setModifiedOn(new Timestamp(System.currentTimeMillis()));
+        userRepo.save(user);
+        return "Profile updated successfully.";
     }
 
     @Override

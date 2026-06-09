@@ -17,7 +17,7 @@ public class UserRegisterDto {
     @NotBlank(message = "First name is required")
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
+    @Size(max = 150, message = "Last name cannot exceed 150 characters")
     private String lastName;
 
     @NotBlank(message = "Email is required")

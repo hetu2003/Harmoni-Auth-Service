@@ -22,19 +22,29 @@ public class MailService {
 
     public String sendTemporaryPassword(String email) {
         String temporaryPassword = UUID.randomUUID().toString().substring(0, 8);
-        
+
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail); 
-            message.setTo(email);
-            message.setSubject("Your Temporary Password for Harmoni");
-            message.setText("Welcome to Harmoni! Your temporary password is: " + temporaryPassword);
-            
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(email);
+            helper.setSubject("Welcome to Harmoni – Your Account is Ready!");
+            String body = "<div style='font-family:sans-serif;max-width:520px;margin:auto;padding:28px;"
+                    + "border:1px solid #eee;border-radius:10px'>"
+                    + "<h2 style='color:#ff8a00;margin-bottom:4px'>Welcome to Harmoni!</h2>"
+                    + "<p style='color:#555'>Your account has been created. Use the temporary password below to log in for the first time.</p>"
+                    + "<div style='font-size:28px;font-weight:bold;letter-spacing:6px;text-align:center;"
+                    + "padding:18px;background:#f9f9f9;border-radius:6px;margin:20px 0;color:#333'>"
+                    + temporaryPassword + "</div>"
+                    + "<p style='color:#555'>After logging in, please change your password from your profile settings.</p>"
+                    + "<p style='color:#888;font-size:13px'>If you did not register on Harmoni, please ignore this email.</p>"
+                    + "</div>";
+            helper.setText(body, true);
             mailSender.send(message);
         } catch (Exception e) {
-            System.err.println("Error sending email: " + e.getMessage());
+            System.err.println("Error sending welcome email: " + e.getMessage());
         }
-        
+
         return temporaryPassword;
     }
 
